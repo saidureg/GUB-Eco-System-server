@@ -29,6 +29,7 @@ async function run() {
     const foodMenuCollection = client.db("gubBossDB").collection("menu");
     const busCollection = client.db("gubBossDB").collection("bus");
     const cartCollection = client.db("gubBossDB").collection("carts");
+    const paymentCollection = client.db("gubBossDB").collection("payments");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -189,6 +190,31 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
       res.send(result);
+    });
+
+    // payment related api
+    app.get("/payments/:email", verifyToken, async (req, res) => {
+      const query = { email: req.params?.email };
+      if (req.params.email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+      // res.send(paymentResult);
+      // carefully delete each item from the cart
+      // console.log("payment Info", payment);
+      const query = {
+        _id: {
+          $in: payment.cartIds.map((id) => new ObjectId(id)),
+        },
+      };
+      const deleteResult = await cartCollection.deleteMany(query);
+      res.send({ paymentResult, deleteResult });
     });
 
     // bus related api
