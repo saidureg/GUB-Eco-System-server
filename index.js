@@ -30,6 +30,7 @@ async function run() {
     const busCollection = client.db("gubBossDB").collection("bus");
     const cartCollection = client.db("gubBossDB").collection("carts");
     const paymentCollection = client.db("gubBossDB").collection("payments");
+    const clubCollection = client.db("gubBossDB").collection("club");
 
     // jwt related api
     app.post("/jwt", async (req, res) => {
@@ -82,6 +83,13 @@ async function run() {
     // user related api
     app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await userCollection.findOne(query);
       res.send(result);
     });
 
@@ -171,6 +179,18 @@ async function run() {
       res.json(result);
     });
 
+    // club related api
+    app.get("/club", async (req, res) => {
+      const result = await clubCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post("/club", verifyToken, verifyModerator, async (req, res) => {
+      const newMenuItem = req.body;
+      const result = await clubCollection.insertOne(newMenuItem);
+      res.json(result);
+    });
+
     // cart collection
     app.get("/carts", async (req, res) => {
       const email = req.query.email;
@@ -221,6 +241,15 @@ async function run() {
     app.get("/buses", async (req, res) => {
       const result = await busCollection.find().toArray();
       res.send(result);
+    });
+
+    // for admin stats
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+      const users = await userCollection.estimatedDocumentCount();
+      const products = await foodMenuCollection.estimatedDocumentCount();
+      const bus = await busCollection.estimatedDocumentCount();
+
+      res.send([{ users: users }, { products: products }, { bus: bus }]);
     });
 
     // Send a ping to confirm a successful connection
